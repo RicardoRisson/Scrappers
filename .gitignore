@@ -1,0 +1,12 @@
+# Ignorar arquivos de dados gerados
+data/
+
+# Ignorar ambientes virtuais
+venv/
+.venv/
+env/
+
+# Ignorar arquivos de cache e temporários
+__pycache__/
+*.pyc
+.DS_Store
