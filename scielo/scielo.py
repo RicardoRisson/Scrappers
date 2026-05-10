@@ -1,98 +1,139 @@
-import requests
-import json
-import time
 import os
+import json
+import asyncio
+import hashlib
+import time
+import random
+import urllib.parse
+import re
+import aiohttp
+import aiofiles
+from playwright.async_api import async_playwright
+from bs4 import BeautifulSoup
 
-def reconstruct_abstract(inverted_index):
-    """
-    Reconstructs the abstract from the OpenAlex inverted index format.
-    """
-    if not inverted_index:
-        return None
-    
-    word_index = {}
-    for word, pos_list in inverted_index.items():
-        for pos in pos_list:
-            word_index[pos] = word
-            
-    sorted_positions = sorted(word_index.keys())
-    return " ".join([word_index[i] for i in sorted_positions])
+# --- CONFIGURAÇÕES DE CAMINHOS ---
+DATA_DIR = "data"
+RAW_FILE = os.path.join(DATA_DIR, "dataset_raw.jsonl")
+LOG_FILE = "logs/pipeline_log.jsonl"
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
-def fetch_openalex_data(query_term, email_contact):
-    """
-    Fetches records from OpenAlex and saves them into the ../data directory.
-    """
-    endpoint = "https://api.openalex.org/works"
-    cursor = "*"
-    
-    # Define path to 'data' folder at the same level as 'scielo'
-    # os.path.join(os.getcwd(), "..", "data") handles the navigation correctly
-    output_dir = os.path.abspath(os.path.join(os.getcwd(), "..", "data"))
-    
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+# --- UTILITÁRIOS ---
+async def log_event(event: dict):
+    async with aiofiles.open(LOG_FILE, "a") as f:
+        await f.write(json.dumps(event) + "\n")
+
+def extract_pid(url: str) -> str:
+    match = re.search(r"pid=S([\d\-X]+)", url)
+    return match.group(1) if match else hashlib.md5(url.encode()).hexdigest()
+
+# --- GESTÃO DE COOKIES (BUNNY SHIELD) ---
+async def refresh_scielo_cookie():
+    """Gera o cookie necessário para ultrapassar o firewall da SciELO."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+        print("[Cookie] Acessando SciELO para validar Shield...")
+        await page.goto("https://search.scielo.org/", wait_until="networkidle")
         
-    output_filename = os.path.join(output_dir, "data_export_education.jsonl")
-    total_records = 0
+        # Espera o cookie de segurança ser injetado
+        await asyncio.sleep(2) 
+        cookies = await context.cookies()
+        cookie_str = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+        await browser.close()
+        os.environ["SCIELO_COOKIE"] = cookie_str
+        return cookie_str
 
-    print(f"Directory: {output_dir}")
-    print(f"Target file: {output_filename}")
+# --- ENGINE DE EXTRAÇÃO ---
+async def fetch_content(session, url, params=None):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+        "Cookie": os.environ.get("SCIELO_COOKIE", "")
+    }
+    try:
+        async with session.get(url, params=params, headers=headers, timeout=20) as resp:
+            if resp.status == 200:
+                return await resp.text()
+            if resp.status == 403:
+                print("[!] Bloqueado (403). Atualizando Cookie...")
+                await refresh_scielo_cookie()
+    except Exception as e:
+        await log_event({"event": "fetch_error", "url": url, "error": str(e)})
+    return None
 
-    with open(output_filename, "a", encoding="utf-8") as f:
-        while True:
+async def process_scielo_search(query: str, max_pages: int = 5):
+    async with aiohttp.ClientSession() as session:
+        # Garante que temos um cookie inicial
+        if not os.environ.get("SCIELO_COOKIE"):
+            await refresh_scielo_cookie()
+
+        for page_num in range(max_pages):
+            from_record = page_num * 20
             params = {
-                'filter': f'default.search:{query_term},language:pt',
-                'per_page': 200,
-                'cursor': cursor,
-                'mailto': email_contact
+                "q": query,
+                "lang": "pt",
+                "count": 20,
+                "from": from_record,
+                "format": "abstract"
             }
-
-            try:
-                response = requests.get(endpoint, params=params)
-                
-                if response.status_code != 200:
-                    print(f"\nError {response.status_code}: Data collection interrupted.")
-                    break
-                
-                data = response.json()
-                results = data.get('results', [])
-                
-                if not results:
-                    break
-
-                for work in results:
-                    record = {
-                        "title": work.get("display_name"),
-                        "authors": [
-                            auth.get("author", {}).get("display_name") 
-                            for auth in work.get("authorships", [])
-                        ],
-                        "publication_year": work.get("publication_year"),
-                        "abstract": reconstruct_abstract(work.get("abstract_inverted_index")),
-                        "doi": work.get("doi"),
-                        "openalex_id": work.get("id")
-                    }
-                    
-                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
-                    total_records += 1
-
-                print(f"Records collected: {total_records}", end="\r")
-
-                next_cursor = data.get('meta', {}).get('next_cursor')
-                if not next_cursor or next_cursor == cursor:
-                    break
-                
-                cursor = next_cursor
-                time.sleep(0.05)
-
-            except Exception as e:
-                print(f"\nCritical error: {e}")
+            
+            print(f"[*] Buscando SciELO - Página {page_num + 1}...")
+            html = await fetch_content(session, "https://search.scielo.org/", params=params)
+            
+            if not html: break
+            
+            soup = BeautifulSoup(html, "lxml")
+            articles = soup.select("div.results div.item")
+            
+            if not articles:
+                print("[!] Sem mais resultados.")
                 break
 
-    print(f"\nProcess finished. Total records saved: {total_records}")
+            async with aiofiles.open(RAW_FILE, "a", encoding="utf-8") as f:
+                for art in articles:
+                    try:
+                        # Extração de Metadados
+                        link_tag = art.find("a", title=True)
+                        if not link_tag: continue
+                        
+                        url = link_tag.get("href", "")
+                        title = link_tag.get_text(strip=True)
+                        
+                        authors_div = art.select_one("div.authors")
+                        authors = [a.strip() for a in authors_div.text.split(";")] if authors_div else []
+                        
+                        source_div = art.select_one("div.source")
+                        year_match = re.search(r"(19|20)\d{2}", source_div.text) if source_div else None
+                        year = int(year_match.group(0)) if year_match else None
+                        
+                        # Abstract (SciELO costuma colocar inline no modo 'abstract')
+                        abstract_div = art.select_one("div.abstract")
+                        abstract_text = abstract_div.get_text(strip=True) if abstract_div else ""
 
+                        # Montagem do Objeto igual ao OpenAlex/Outros
+                        record = {
+                            "title": title,
+                            "authors": authors,
+                            "publication_year": year,
+                            "abstract": abstract_text,
+                            "doi": extract_pid(url), # SciELO usa PID no lugar do DOI muitas vezes
+                            "url": url,
+                            "source": "scielo"
+                        }
+
+                        await f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                        await log_event({"event": "record_saved", "source": "scielo", "title": title[:50]})
+                    
+                    except Exception as e:
+                        continue
+            
+            # Delay humano para evitar ban
+            await asyncio.sleep(random.uniform(2, 5))
+
+# --- EXECUÇÃO ---
 if __name__ == "__main__":
     SEARCH_TERM = "educação"
-    CONTACT_EMAIL = "email@dominio.com"
-    
-    fetch_openalex_data(SEARCH_TERM, CONTACT_EMAIL)
+    asyncio.run(process_scielo_search(SEARCH_TERM, max_pages=10))

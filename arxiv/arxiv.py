@@ -12,7 +12,7 @@ EMAIL_CONTATO = "email@dominio.com"
 ARQUIVO_SAIDA = "dataset_computacao_pt.csv"
 
 # Mudamos para buscar "computação" OU "computacao" para dobrar o alcance
-TERMO_BUSCA = 'cat:cs.*' 
+TERMO_BUSCA = 'cat:educação*' 
 
 BATCH_SIZE = 50 
 PAUSA_MINIMA = 6

@@ -1,2 +1,14 @@
-requests==2.31.0
+# --- Tratamento e Análise de Dados ---
+pandas==2.2.2
 langdetect==1.0.9
+
+# --- Scraping e Requisições HTTP ---
+requests==2.32.3
+aiohttp==3.9.5
+aiofiles==23.2.1
+beautifulsoup4==4.12.3
+lxml==5.2.2
+
+# --- Automação de Navegador (Bypass de Firewall) ---
+playwright==1.44.0
+python-dotenv==1.0.1

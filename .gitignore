@@ -10,3 +10,6 @@ env/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Ignorar dados da pesquisa atual
+.sensitive.txt
