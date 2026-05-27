@@ -12,4 +12,4 @@ __pycache__/
 .DS_Store
 
 # Ignorar dados da pesquisa atual
-.sensitive.txt
+personal/

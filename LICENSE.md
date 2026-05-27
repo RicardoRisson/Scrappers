@@ -1,6 +1,6 @@
 # Licença de Uso Acadêmico e Não Comercial
 
-Copyright (c) 2026 Ricardo Risson Machado
+Copyright (c) 2026 NOME-CENSURADO-TEMPORARIAMENTE
 
 ### 1. Permissão de Uso
 É concedida permissão, de forma gratuita, para qualquer pessoa obter uma cópia deste software e arquivos de documentação associados, exclusivamente para fins de **PESQUISA ACADÊMICA, ESTUDOS E USO NÃO LUCRATIVO**.
