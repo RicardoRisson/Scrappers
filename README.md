@@ -38,7 +38,7 @@
 >
 > A aba **SciELO** usa um navegador de verdade (Chromium, via Playwright) para conseguir passar pela proteção anti-bot do site. O `.exe` **não** vem com esse navegador embutido.
 >
-> ### Rode isto no PowerShell ANTES de abrir o `.exe` (uma única vez):
+> ### Rode isto no PowerShell ANTES de abrir o `.exe` (uma única vez, python deve estar instalado para usar "pip"):
 >
 > ```powershell
 > pip install playwright
