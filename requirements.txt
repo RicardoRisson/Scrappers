@@ -1,0 +1,7 @@
+aiohttp
+aiofiles
+playwright
+beautifulsoup4
+lxml
+requests
+langdetect
