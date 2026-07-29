@@ -191,4 +191,4 @@ Scrappers/
 
 # Licença
 
-Este projeto é distribuído sob a licença **GPL-3.0**. Veja o arquivo `LICENSE` no repositório para o texto completo.
+Este projeto é distribuído sob a licença **GPL-3.0**. Veja o arquivo `LICENSE` no repositório para o texto completo
