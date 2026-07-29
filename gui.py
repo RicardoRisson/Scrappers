@@ -264,12 +264,12 @@ class ArxivTab(ScraperTab):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.query_var = self.add_entry("Consulta arXiv:", "cat:educação*")
-        self.add_hint("ex.: cat:educação*  ou  all:educação  (sintaxe de busca da API do arXiv)")
+        self.query_var = self.add_entry("Consulta arXiv:", "all:education")
+        self.add_hint("Ex.: all:education  ou  ti:\"machine learning\"  (Prefixos: all, ti, abs, au, cat)")
         self.batch_size_var = self.add_spinbox("Resultados por requisição:", 50, 1, 200)
         self.min_pause_var = self.add_spinbox("Pausa mínima entre requisições (segundos):", 6.0, 1, 60, increment=0.5)
         self.max_start_var = self.add_spinbox("Índice máximo (limite de segurança):", 20000, 100, 200000, increment=100)
-        self.pt_only_var = self.add_checkbox("Manter apenas sentenças detectadas em português", default=True)
+        self.pt_only_var = self.add_checkbox("Manter apenas sentenças detectadas em português", default=False)
         self.output_var = self.add_output_path("Arquivo de saída:", [("CSV", "*.csv")], "arxiv_dataset.csv")
         self.json_var, self.csv_var = self.add_format_options(default_json=False, default_csv=True)
 
@@ -281,7 +281,7 @@ class ArxivTab(ScraperTab):
         if not self.require(output_path, "Escolha um arquivo de saída."):
             return
         if not self.require(self.json_var.get() or self.csv_var.get(), "Selecione ao menos um formato de saída (JSON e/ou CSV)."):
-            return
+            returna
 
         def target():
             run_arxiv_scraper(
