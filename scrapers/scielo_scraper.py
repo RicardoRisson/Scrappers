@@ -1,9 +1,3 @@
-"""
-SciELO scraper — refactored so it can be driven by the GUI instead of
-hardcoded constants. The scraping logic itself is unchanged from the
-original script.
-"""
-
 import os
 import json
 import asyncio
@@ -17,54 +11,93 @@ import aiofiles
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 
+# Define o User-Agent global para garantir que o Playwright e o aiohttp usem a mesma assinatura
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
 def extract_pid(url: str) -> str:
     match = re.search(r"pid=S([\d\-X]+)", url)
     return match.group(1) if match else hashlib.md5(url.encode()).hexdigest()
 
+async def _launch_browser_with_fallback(p, headless: bool, log):
+    """
+    Tenta abrir o navegador do Playwright. Se estiver rodando via .exe
+    e faltar o binário, tenta usar o Chrome do Windows e depois o MS Edge.
+    """
+    try:
+        return await p.chromium.launch(headless=headless)
+    except Exception:
+        log("[Navegador] Chromium interno não encontrado. Tentando Google Chrome...")
+
+    try:
+        return await p.chromium.launch(headless=headless, channel="chrome")
+    except Exception:
+        log("[Navegador] Google Chrome não encontrado. Tentando Microsoft Edge...")
+
+    try:
+        return await p.chromium.launch(headless=headless, channel="msedge")
+    except Exception as e:
+        log("[Erro Fatal] Nenhum navegador (Chrome/Edge) foi detectado no sistema.")
+        raise e
 
 async def _refresh_scielo_cookie(headless: bool, log):
     """Generates the cookie needed to get past SciELO's bot-protection shield."""
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless)
+        browser = await _launch_browser_with_fallback(p, headless, log)
+        
         context = await browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
-            )
+            user_agent=USER_AGENT, # Usa a constante global
+            viewport={"width": 1280, "height": 720},
         )
+        
         page = await context.new_page()
-        log("[Cookie] Accessing SciELO to validate the Shield...")
-        await page.goto("https://search.scielo.org/", wait_until="networkidle")
-
-        # Wait for the security cookie to be injected
-        await asyncio.sleep(2)
-        cookies = await context.cookies()
-        cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in cookies)
-        await browser.close()
-        os.environ["SCIELO_COOKIE"] = cookie_str
-        return cookie_str
-
+        
+        # Oculta a propriedade 'navigator.webdriver' que os bloqueadores detectam
+        await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        log("[Cookie] Acessando SciELO para validar a proteção (Shield)...")
+        try:
+            await page.goto("https://search.scielo.org/", wait_until="domcontentloaded", timeout=30000)
+            
+            # Dá tempo para o Cloudflare validar e injetar os cookies
+            log("[Cookie] Aguardando validação de segurança (6 segundos)...")
+            await asyncio.sleep(6)
+            
+            cookies = await context.cookies()
+            cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in cookies if c.get('value'))
+            
+            os.environ["SCIELO_COOKIE"] = cookie_str
+            log(f"[Cookie] Capturado com sucesso! (Tamanho: {len(cookie_str)})")
+            return cookie_str
+        except Exception as e:
+            log(f"[Cookie] Erro ao obter cookie: {e}")
+            return ""
+        finally:
+            await browser.close()
 
 async def _fetch_content(session, url, headless, log, params=None):
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
-        ),
-        "Cookie": os.environ.get("SCIELO_COOKIE", ""),
-    }
-    try:
-        async with session.get(url, params=params, headers=headers, timeout=20) as resp:
-            if resp.status == 200:
-                return await resp.text()
-            if resp.status == 403:
-                log("[!] Blocked (403). Refreshing cookie...")
-                await _refresh_scielo_cookie(headless, log)
-    except Exception as e:
-        log(f"[fetch_error] {url} -> {e}")
-    return None
-
+    """Faz a requisição com sistema de retentativa em caso de erro 403."""
+    max_retries = 2 # Tenta até 2 vezes caso seja bloqueado
+    
+    for attempt in range(max_retries):
+        headers = {
+            "User-Agent": USER_AGENT, # Mesmo do Playwright
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Cookie": os.environ.get("SCIELO_COOKIE", ""),
+        }
+        
+        try:
+            async with session.get(url, params=params, headers=headers, timeout=20) as resp:
+                if resp.status == 200:
+                    return await resp.text()
+                if resp.status == 403:
+                    log(f"[!] Blocked (403) na tentativa {attempt+1}/{max_retries}. Atualizando cookie...")
+                    await _refresh_scielo_cookie(headless, log)
+                    continue # Volta para o início do loop e tenta de novo com o novo cookie
+        except Exception as e:
+            log(f"[fetch_error] {url} -> {e}")
+            
+    return None # Retorna None apenas se falhar todas as tentativas
 
 async def run_scielo_scraper(
     query: str,
@@ -74,16 +107,6 @@ async def run_scielo_scraper(
     log=print,
     stop_event: threading.Event | None = None,
 ):
-    """
-    Runs the SciELO search scraper.
-
-    query: search term (e.g. "educação")
-    max_pages: number of result pages to fetch (20 records per page)
-    output_path: path to the .jsonl file records will be appended to
-    headless: whether the cookie-refresh browser window is visible
-    log: callable(str) used for progress/status messages
-    stop_event: optional asyncio.Event; scraper stops cleanly when it is set
-    """
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     total_saved = 0
 
@@ -109,7 +132,7 @@ async def run_scielo_scraper(
             html = await _fetch_content(session, "https://search.scielo.org/", headless, log, params=params)
 
             if not html:
-                log("[!] No response, stopping.")
+                log("[!] No response or max retries reached, stopping.")
                 break
 
             soup = BeautifulSoup(html, "lxml")
@@ -126,7 +149,7 @@ async def run_scielo_scraper(
                         if not link_tag:
                             continue
 
-                        url = link_tag.get("href", "")
+                        url_art = link_tag.get("href", "")
                         title = link_tag.get_text(strip=True)
 
                         authors_div = art.select_one("div.authors")
@@ -144,8 +167,8 @@ async def run_scielo_scraper(
                             "authors": authors,
                             "publication_year": year,
                             "abstract": abstract_text,
-                            "doi": extract_pid(url),
-                            "url": url,
+                            "doi": extract_pid(url_art),
+                            "url": url_art,
                             "source": "scielo",
                         }
 
