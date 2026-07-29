@@ -1,0 +1,28 @@
+Academic Non-Commercial License 1.0
+
+Copyright (c) 2026 Ricardo Risson Machado
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, merge, publish, and distribute the Software, subject to the
+following conditions:
+
+1. The Software may only be used for non-commercial purposes.
+
+2. Commercial use of the Software, in whole or in part, is strictly prohibited
+without prior written permission from the copyright holder.
+
+3. Any redistribution of the Software must include this copyright notice and
+this license text.
+
+4. Modified versions of the Software must clearly indicate that changes have
+been made.
+
+5. The Software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, and noninfringement.
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.
