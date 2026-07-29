@@ -36,16 +36,22 @@
 > [!WARNING]
 > ## 🚨 O .exe **NÃO FUNCIONA SOZINHO** — leia isto primeiro 🚨
 >
-> A aba **SciELO** usa um navegador de verdade (Chromium, via Playwright) para conseguir passar pela proteção anti-bot do site. O `.exe` **não** vem com esse navegador embutido — é grande demais e precisa ser instalado separadamente na sua máquina.
+> A aba **SciELO** usa um navegador de verdade (Chromium, via Playwright) para conseguir passar pela proteção anti-bot do site. O `.exe` **não** vem com esse navegador embutido.
 >
-> ### Você precisa rodar isto ANTES de abrir o `.exe`, uma única vez:
+> ### Rode isto no PowerShell ANTES de abrir o `.exe` (uma única vez):
 >
-> ```bash
+> ```powershell
 > pip install playwright
-> playwright install chromium
+> playwright install
 > ```
 >
-> **Sem isso, a aba SciELO trava/erra ao tentar iniciar.** As abas **arXiv** e **OpenAlex** funcionam no `.exe` sem precisar de nada disso — só a aba SciELO depende do Chromium.
+> **Se já rodou antes e o erro continuar aparecendo** (tipo `Executable doesn't exist at ...\_MEI...\playwright\...\chrome.exe`), rode de novo o comando acima — às vezes é preciso reinstalar depois de atualizar o `.exe`:
+>
+> ```powershell
+> playwright install
+> ```
+>
+> Sem isso, a aba SciELO trava/erra ao tentar iniciar. As abas **arXiv** e **OpenAlex** funcionam no `.exe` sem precisar de nada disso.
 >
 > Precisa de Python instalado só para rodar esses dois comandos (não precisa do resto do projeto). Baixe em [python.org](https://www.python.org/downloads/) se ainda não tiver.
 
