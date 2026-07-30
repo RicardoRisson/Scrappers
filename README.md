@@ -1,5 +1,5 @@
 <h1 align="center">
- <img height="100px" src="assets/inf_logo.png" />
+ <img height="100px" src="assets/inf_logo.PNG" />
  <br />
  Scraper Acadêmico
 </h1>
@@ -170,8 +170,8 @@ Scrappers/
 ├── requirements.txt        ← dependências para rodar o app
 ├── requirements-build.txt  ← dependência extra só para gerar o .exe
 ├── assets/
-│   ├── inf_logo.png
-│   ├── inf_logo_small.png
+│   ├── inf_logo.PNG
+│   ├── inf_logo_small.PNG
 │   └── inf_logo.ico
 ├── docs/
 │   └── screenshots/
@@ -185,23 +185,23 @@ Scrappers/
 # Screenshots
 
 <p align="center">
-  <img width="90%" src="docs/screenshots/a1.png" />
+  <img width="90%" src="docs/screenshots/a1.PNG" />
   <br /><sub>Aba SciELO</sub>
 </p>
 <p align="center">
-  <img width="90%" src="docs/screenshots/a2.png" />
+  <img width="90%" src="docs/screenshots/a2.PNG" />
   <br /><sub>Aba arXiv</sub>
 </p>
 <p align="center">
-  <img width="90%" src="docs/screenshots/a3.png" />
+  <img width="90%" src="docs/screenshots/a3.PNG" />
   <br /><sub>Aba OpenAlex</sub>
 </p>
 <p align="center">
-  <img width="90%" src="docs/screenshots/a4.png" />
+  <img width="90%" src="docs/screenshots/a4.PNG" />
   <br /><sub>Mesclar Dados</sub>
 </p>
 <p align="center">
-  <img width="90%" src="docs/screenshots/a5.png" />
+  <img width="90%" src="docs/screenshots/a5.PNG" />
   <br /><sub>Aba Converter para CSV</sub>
 </p>
 # Licença
