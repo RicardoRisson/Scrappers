@@ -1,5 +1,5 @@
 <h1 align="center">
- <img height="100px" src="assets/inf_logo.PNG" />
+ <img height="100px" src="assets/inf_logo.png" />
  <br />
  Scraper Acadêmico
 </h1>
