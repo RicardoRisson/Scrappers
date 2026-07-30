@@ -88,6 +88,8 @@
 * Escolha de formato de saída em JSON, CSV, ou os dois ao mesmo tempo
 * Botão para parar a coleta a qualquer momento, sem travar a interface
 * Feito para lidar com datasets de médio/grande porte (+120k registros) com baixo consumo de RAM
+* Mesclar Dados: Junte múltiplos arquivos CSV ou JSON/JSONL em um único arquivo, alinhando colunas automaticamente independentemente da ordem original.
+* Conversor Direto: Converta arquivos JSON/JSONL brutos em planilhas CSV com interface dedicada.
 
 ## Abas
 
@@ -183,18 +185,25 @@ Scrappers/
 # Screenshots
 
 <p align="center">
-  <img width="90%" src="docs/screenshots/scielo_tab.png" />
+  <img width="90%" src="docs/screenshots/a1.png" />
   <br /><sub>Aba SciELO</sub>
 </p>
 <p align="center">
-  <img width="90%" src="docs/screenshots/arxiv_tab.png" />
+  <img width="90%" src="docs/screenshots/a2.png" />
   <br /><sub>Aba arXiv</sub>
 </p>
 <p align="center">
-  <img width="90%" src="docs/screenshots/openalex_tab.png" />
+  <img width="90%" src="docs/screenshots/a3.png" />
   <br /><sub>Aba OpenAlex</sub>
 </p>
-
+<p align="center">
+  <img width="90%" src="docs/screenshots/a4.png" />
+  <br /><sub>Mesclar Dados</sub>
+</p>
+<p align="center">
+  <img width="90%" src="docs/screenshots/a5.png" />
+  <br /><sub>Aba Converter para CSV</sub>
+</p>
 # Licença
 
 Este projeto é distribuído sob a licença **GPL-3.0**. Veja o arquivo `LICENSE` no repositório para o texto completo
